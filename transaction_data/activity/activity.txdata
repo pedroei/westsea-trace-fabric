@@ -1,0 +1,51 @@
+[
+  {
+    "transactionName": "ActivityExists",
+    "transactionLabel": "A test ActivityExists transaction",
+    "arguments": [
+      "act1"
+    ],
+    "transientData": {}
+  },
+  {
+    "transactionName": "CreateActivity",
+    "transactionLabel": "A test CreateActivity transaction",
+    "arguments": [
+      "act1",
+      "Cut",
+      "21e8c56c-9480-4413-8369-6defe721e93f",
+      "2022-04-16T20:40:33.953660",
+      [
+        "123",
+        "1234"
+      ],
+      {
+        "docType": "productSerialNum",
+        "ID": "prod4123",
+        "serialNumber": "87431623561",
+        "designation": "Product 123+1234",
+        "productType": "component",
+        "documentKeys": [
+          "dockkey89"
+        ]
+      }
+    ],
+    "transientData": {}
+  },
+  {
+    "transactionName": "ReadActivity",
+    "transactionLabel": "A test ReadActivity transaction",
+    "arguments": [
+      "act1"
+    ],
+    "transientData": {}
+  },
+  {
+    "transactionName": "DeleteActivity",
+    "transactionLabel": "A test DeleteActivity transaction",
+    "arguments": [
+      "act1"
+    ],
+    "transientData": {}
+  }
+]

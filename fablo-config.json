@@ -1,0 +1,58 @@
+{
+  "$schema": "https://github.com/softwaremill/fablo/releases/download/1.0.0/schema.json",
+  "global": {
+    "fabricVersion": "2.2.4",
+    "tls": false,
+    "tools": {
+      "explorer": true
+    }
+  },
+  "orgs": [
+    {
+      "organization": {
+        "name": "Orderer",
+        "domain": "orderer.example.com"
+      },
+      "orderers": [
+        {
+          "groupName": "group1",
+          "type": "solo",
+          "instances": 1
+        }
+      ]
+    },
+    {
+      "organization": {
+        "name": "Org1",
+        "domain": "org1.example.com"
+      },
+      "peer": {
+        "instances": 2,
+        "db": "CouchDb"
+      },
+      "tools": {
+        "fabloRest": true
+      }
+    }
+  ],
+  "channels": [
+    {
+      "name": "my-channel1",
+      "orgs": [
+        {
+          "name": "Org1",
+          "peers": ["peer0", "peer1"]
+        }
+      ]
+    }
+  ],
+  "chaincodes": [
+    {
+      "name": "trace-westsea",
+      "version": "3",
+      "lang": "golang",
+      "channel": "my-channel1",
+      "directory": "."
+    }
+  ]
+}

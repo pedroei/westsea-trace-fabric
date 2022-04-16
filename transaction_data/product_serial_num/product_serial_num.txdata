@@ -1,0 +1,53 @@
+[
+  {
+    "transactionName": "ProductSerialNumExists",
+    "transactionLabel": "A test ProductSerialNumExists transaction",
+    "arguments": [
+      "1234"
+    ],
+    "transientData": {}
+  },
+  {
+    "transactionName": "CreateProductSerialNum",
+    "transactionLabel": "A test CreateProductSerialNum transaction",
+    "arguments": [
+      "1234",
+      "3185316723581692",
+      "Product1",
+      "part",
+      [
+        "dockey1hg1j2vjh",
+        "dockey2hgvejwh12jw3"
+      ]
+    ],
+    "transientData": {}
+  },
+  {
+    "transactionName": "ReadProductSerialNum",
+    "transactionLabel": "A test ReadProductSerialNum transaction",
+    "arguments": [
+      "1234"
+    ],
+    "transientData": {}
+  },
+  {
+    "transactionName": "UpdateProductSerialNumDocumentKeys",
+    "transactionLabel": "A test UpdateProductSerialNumDocumentKeys transaction",
+    "arguments": [
+      "1234",
+      [
+        "updateddockey1hg1j2vjh",
+        "updateddockey2hgvejwh12jw3"
+      ]
+    ],
+    "transientData": {}
+  },
+  {
+    "transactionName": "DeleteProductSerialNum",
+    "transactionLabel": "A test DeleteProductSerialNum transaction",
+    "arguments": [
+      "1234"
+    ],
+    "transientData": {}
+  }
+]

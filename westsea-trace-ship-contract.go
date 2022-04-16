@@ -193,7 +193,7 @@ func (c *WestseaTraceShipContract) CreateActivity(ctx contractapi.TransactionCon
 	   if err != nil {
 		   return "", fmt.Errorf("Could not read from world state. %s", err)
 	   } else if !exists {
-		   return "", fmt.Errorf("The product [%s] does not exists", inputID)
+		   return "", fmt.Errorf("The input product [%s] does not exists", inputID)
 	   }
    }
 
@@ -201,8 +201,19 @@ func (c *WestseaTraceShipContract) CreateActivity(ctx contractapi.TransactionCon
 	exists, err = c.ActivityExists(ctx, outputProductSerialNum.ID)
 	if err != nil {
 		return "", fmt.Errorf("Could not read from world state. %s", err)
-	} else if !exists {
-		return "", fmt.Errorf("The product [%s] does not exists", outputProductSerialNum.ID)
+	} else if exists {
+		return "", fmt.Errorf("The output product [%s] already exists", outputProductSerialNum.ID)
+	}
+
+	_, err = c.CreateProductSerialNum(ctx, 
+		outputProductSerialNum.ID,
+		outputProductSerialNum.SerialNumber,
+		outputProductSerialNum.Designation,
+		outputProductSerialNum.ProductType,
+		outputProductSerialNum.DocumentKeys,
+	)
+	if err != nil {
+		return "", fmt.Errorf("could not read from world state. %s", err)
 	}
 
 	activity := &Activity{

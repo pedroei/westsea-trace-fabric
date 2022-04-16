@@ -1,0 +1,44 @@
+[
+    {
+        "transactionName": "WestseaTraceShipExists",
+        "transactionLabel": "A test WestseaTraceShipExists transaction",
+        "arguments": [
+            "001"
+        ],
+        "transientData": {}
+    },
+    {
+        "transactionName": "CreateWestseaTraceShip",
+        "transactionLabel": "A test CreateWestseaTraceShip transaction",
+        "arguments": [
+            "001",
+            "some value"
+        ],
+        "transientData": {}
+    },
+    {
+        "transactionName": "ReadWestseaTraceShip",
+        "transactionLabel": "A test ReadWestseaTraceShip transaction",
+        "arguments": [
+            "001"
+        ],
+        "transientData": {}
+    },
+    {
+        "transactionName": "UpdateWestseaTraceShip",
+        "transactionLabel": "A test UpdateWestseaTraceShip transaction",
+        "arguments": [
+            "001",
+            "some other value"
+        ],
+        "transientData": {}
+    },
+    {
+        "transactionName": "DeleteWestseaTraceShip",
+        "transactionLabel": "A test DeleteWestseaTraceShip transaction",
+        "arguments": [
+            "001"
+        ],
+        "transientData": {}
+    }
+]

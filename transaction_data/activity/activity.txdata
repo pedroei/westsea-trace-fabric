@@ -15,16 +15,18 @@
       "Cut",
       "21e8c56c-9480-4413-8369-6defe721e93f",
       "2022-04-16T20:40:33.953660",
-      [
-        "123",
-        "1234"
-      ],
       {
-        "docType": "productSerialNum",
+        "1234": 12
+      },
+      {
+        "docType": "productLot",
         "ID": "prod4123",
-        "serialNumber": "87431623561",
+        "referenceNumber": "87431623561",
+        "isSerialNumber": true,
         "designation": "Product 123+1234",
         "productType": "component",
+        "initialQuantity": 2,
+        "availableQuantity": 3,
         "documentKeys": [
           "dockkey89"
         ]

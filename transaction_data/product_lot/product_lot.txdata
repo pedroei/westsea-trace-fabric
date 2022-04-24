@@ -1,0 +1,64 @@
+[
+  {
+    "transactionName": "ProductLotExists",
+    "transactionLabel": "A test ProductLotExists transaction",
+    "arguments": [
+      "1234"
+    ],
+    "transientData": {}
+  },
+  {
+    "transactionName": "CreateProductLot",
+    "transactionLabel": "A test CreateProductLot transaction",
+    "arguments": [
+      "1234",
+      "3185316723581692",
+      false,
+      "Product1",
+      "part",
+      100,
+      [
+        "dockey1hg1j2vjh",
+        "dockey2hgvejwh12jw3"
+      ]
+    ],
+    "transientData": {}
+  },
+  {
+    "transactionName": "ReadProductLot",
+    "transactionLabel": "A test ReadProductLot transaction",
+    "arguments": [
+      "1234"
+    ],
+    "transientData": {}
+  },
+  {
+    "transactionName": "UpdateProductLotDocumentKeys",
+    "transactionLabel": "A test UpdateProductLotDocumentKeys transaction",
+    "arguments": [
+      "1234",
+      [
+        "updateddockey1hg1j2vjh",
+        "updateddockey2hgvejwh12jw3"
+      ]
+    ],
+    "transientData": {}
+  },
+  {
+    "transactionName": "UpdateProductAvailableQuantity",
+    "transactionLabel": "A test UpdateProductAvailableQuantity transaction",
+    "arguments": [
+      "1234",
+      "51"
+    ],
+    "transientData": {}
+  },
+  {
+    "transactionName": "DeleteProductLot",
+    "transactionLabel": "A test DeleteProductLot transaction",
+    "arguments": [
+      "1234"
+    ],
+    "transientData": {}
+  }
+]

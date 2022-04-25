@@ -24,30 +24,104 @@ type WestseaTraceShipContract struct {
  ****************************************
  */
 
- // GetAllProductLot retrieves all instances of ProductLot from the world state
+// GetAllProductLot retrieves all instances of ProductLot from the world state
 func (c *WestseaTraceShipContract) GetAllProductLot(ctx contractapi.TransactionContextInterface) ([]*ProductLot, error) {
+	//FIXME: Get only the needed data, this gets everything
 	resultsIterator, err := ctx.GetStub().GetStateByRange("", "")
 	if err != nil {
-	  return nil, err
+		return nil, err
 	}
 	defer resultsIterator.Close()
-  
+
 	var productLots []*ProductLot
 	for resultsIterator.HasNext() {
-	  queryResponse, err := resultsIterator.Next()
-	  if err != nil {
-		return nil, err
-	  }
-  
-	  var productLot ProductLot
-	  err = json.Unmarshal(queryResponse.Value, &productLot)
-	  if err != nil {
-		return nil, err
-	  }
-	  productLots = append(productLots, &productLot)
+		queryResponse, err := resultsIterator.Next()
+		if err != nil {
+			return nil, err
+		}
+
+		var productLot ProductLot
+		err = json.Unmarshal(queryResponse.Value, &productLot)
+		if err != nil {
+			return nil, err
+		}
+
+		if productLot.DocType == "productLot" {
+			productLots = append(productLots, &productLot)
+		}
 	}
-  
+
 	return productLots, nil
+}
+
+func (c *WestseaTraceShipContract) GetAllActivities(ctx contractapi.TransactionContextInterface) ([]*Activity, error) {
+	//FIXME: Get only the needed data, this gets everything
+	resultsIterator, err := ctx.GetStub().GetStateByRange("", "")
+	if err != nil {
+		return nil, err
+	}
+	defer resultsIterator.Close()
+
+	var activities []*Activity
+	for resultsIterator.HasNext() {
+		queryResponse, err := resultsIterator.Next()
+		if err != nil {
+			return nil, err
+		}
+
+		var activity Activity
+		err = json.Unmarshal(queryResponse.Value, &activity)
+		if err != nil {
+			return nil, err
+		}
+
+		if activity.DocType == "activity" {
+			activities = append(activities, &activity)
+		}
+	}
+
+	return activities, nil
+}
+
+//FIXME: Does it need to be the referenceNumber?
+func (c *WestseaTraceShipContract) GetTraceability(ctx contractapi.TransactionContextInterface, productID string) ([]*Activity, error) {
+	//the products must exist
+	exists, err := c.ProductLotExists(ctx, productID)
+	if err != nil {
+		return nil, fmt.Errorf("Could not read from world state. %s", err)
+	} else if !exists {
+		return nil, fmt.Errorf("The product [%s] does not exists", productID)
+	}
+
+	//get product
+	product, err := c.ReadProductLot(ctx, productID)
+	if err != nil {
+		return nil, fmt.Errorf("Could not read from world state. %s", err)
+	}
+
+	//get all activities
+	allActivities, err := c.GetAllActivities(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("Could not read from world state. %s", err)
+	}
+
+	var tracedActivities []*Activity
+
+	for _, activity := range allActivities {
+		//filter for the activities that have the outputLot == product
+		if activity.OutputProductLot.ID == product.ID {
+			tracedActivities = append(tracedActivities, activity)
+		}
+
+		//filter for the activities that have the product.ID == inputLots.key
+		for inputID := range activity.InputProductLots {
+			if inputID == product.ID {
+				tracedActivities = append(tracedActivities, activity)
+			}
+		}
+	}
+
+	return tracedActivities, nil
 }
 
 // ProductLotExists returns true when asset with given ID exists in world state
@@ -62,15 +136,15 @@ func (c *WestseaTraceShipContract) ProductLotExists(ctx contractapi.TransactionC
 }
 
 // CreateProductLot creates a new instance of WestseaTraceShip
-func (c *WestseaTraceShipContract) CreateProductLot(ctx contractapi.TransactionContextInterface, 
-	productLotID string, 
+func (c *WestseaTraceShipContract) CreateProductLot(ctx contractapi.TransactionContextInterface,
+	productLotID string,
 	referenceNumber string,
 	isSerialNumber bool,
 	designation string,
 	productType string,
 	initialAmount float32,
 	documentKeys []string,
-	) (string, error) {
+) (string, error) {
 
 	exists, err := c.ProductLotExists(ctx, productLotID)
 	if err != nil {
@@ -151,15 +225,15 @@ func (c *WestseaTraceShipContract) UpdateProductLotDocumentKeys(ctx contractapi.
 	}
 
 	productLot := &ProductLot{
-		DocType: "productLot",
-		ID:      productLotID,
-		ReferenceNumber: outdatedProductLot.ReferenceNumber,
-		IsSerialNumber: outdatedProductLot.IsSerialNumber,
-		Designation: outdatedProductLot.Designation,
-		ProductType: outdatedProductLot.ProductType,
+		DocType:           "productLot",
+		ID:                productLotID,
+		ReferenceNumber:   outdatedProductLot.ReferenceNumber,
+		IsSerialNumber:    outdatedProductLot.IsSerialNumber,
+		Designation:       outdatedProductLot.Designation,
+		ProductType:       outdatedProductLot.ProductType,
 		InitialQuantity:   outdatedProductLot.InitialQuantity,
 		AvailableQuantity: outdatedProductLot.AvailableQuantity,
-		DocumentKeys: newDocumentKeys,
+		DocumentKeys:      newDocumentKeys,
 	}
 
 	bytes, _ := json.Marshal(productLot)
@@ -174,8 +248,6 @@ func (c *WestseaTraceShipContract) UpdateProductLotDocumentKeys(ctx contractapi.
 
 	return fmt.Sprintf("%s document keys updated successfully", productLotID), nil
 }
-
-
 
 // UpdateProductAvailableAmount retrieves an instance of ProductLot from the world state and updates its available quantity
 func (c *WestseaTraceShipContract) UpdateProductAvailableQuantity(ctx contractapi.TransactionContextInterface, productLotID string, newAvailableQuantity float32) (string, error) {
@@ -197,15 +269,15 @@ func (c *WestseaTraceShipContract) UpdateProductAvailableQuantity(ctx contractap
 	}
 
 	productLot := &ProductLot{
-		DocType: "productLot",
-		ID:      productLotID,
-		ReferenceNumber: outdatedProductLot.ReferenceNumber,
-		IsSerialNumber: outdatedProductLot.IsSerialNumber,
-		Designation: outdatedProductLot.Designation,
-		ProductType: outdatedProductLot.ProductType,
+		DocType:           "productLot",
+		ID:                productLotID,
+		ReferenceNumber:   outdatedProductLot.ReferenceNumber,
+		IsSerialNumber:    outdatedProductLot.IsSerialNumber,
+		Designation:       outdatedProductLot.Designation,
+		ProductType:       outdatedProductLot.ProductType,
 		InitialQuantity:   outdatedProductLot.InitialQuantity,
 		AvailableQuantity: newAvailableQuantity,
-		DocumentKeys: outdatedProductLot.DocumentKeys,
+		DocumentKeys:      outdatedProductLot.DocumentKeys,
 	}
 
 	bytes, _ := json.Marshal(productLot)
@@ -220,6 +292,7 @@ func (c *WestseaTraceShipContract) UpdateProductAvailableQuantity(ctx contractap
 
 	return fmt.Sprintf("%s available quantity updated successfully to %.2f", productLotID, newAvailableQuantity), nil
 }
+
 // DeleteProductLot deletes an instance of ProductLot from the world state
 func (c *WestseaTraceShipContract) DeleteProductLot(ctx contractapi.TransactionContextInterface, productLotID string) error {
 	exists, err := c.ProductLotExists(ctx, productLotID)
@@ -232,18 +305,16 @@ func (c *WestseaTraceShipContract) DeleteProductLot(ctx contractapi.TransactionC
 	return ctx.GetStub().DelState(productLotID)
 }
 
+/*
+ ****************************************
+ ****************************************
+ * Activity TRANSCATION METHDOS *
+ ****************************************
+ ****************************************
+ */
 
-
- /*
-  ****************************************
-  ****************************************
-  * Activity TRANSCATION METHDOS *
-  ****************************************
-  ****************************************
-  */
- 
- // ActivityExists returns true when asset with given ID exists in world state
- func (c *WestseaTraceShipContract) ActivityExists(ctx contractapi.TransactionContextInterface, activityID string) (bool, error) {
+// ActivityExists returns true when asset with given ID exists in world state
+func (c *WestseaTraceShipContract) ActivityExists(ctx contractapi.TransactionContextInterface, activityID string) (bool, error) {
 	data, err := ctx.GetStub().GetState(activityID)
 
 	if err != nil {
@@ -254,14 +325,14 @@ func (c *WestseaTraceShipContract) DeleteProductLot(ctx contractapi.TransactionC
 }
 
 // CreateActivity creates a new instance of WestseaTraceShip
-func (c *WestseaTraceShipContract) CreateActivity(ctx contractapi.TransactionContextInterface, 
-	activityID string, 
+func (c *WestseaTraceShipContract) CreateActivity(ctx contractapi.TransactionContextInterface,
+	activityID string,
 	designation string,
 	userId string,
 	dateTime string,
 	inputProductLots map[string]float32,
 	outputProductLot ProductLot,
-	) (string, error) {
+) (string, error) {
 
 	exists, err := c.ActivityExists(ctx, activityID)
 	if err != nil {
@@ -270,24 +341,24 @@ func (c *WestseaTraceShipContract) CreateActivity(ctx contractapi.TransactionCon
 		return "", fmt.Errorf("the asset %s already exists", activityID)
 	}
 
-	for inputID, usedAmount  := range inputProductLots {
-		
-		//the input products must exist
-	   exists, err = c.ProductLotExists(ctx, inputID)
-	   if err != nil {
-		   return "", fmt.Errorf("Could not read from world state. %s", err)
-	   } else if !exists {
-		   return "", fmt.Errorf("The input product [%s] does not exists", inputID)
-	   }
+	for inputID, usedAmount := range inputProductLots {
 
-	   //get product
-	   product, err := c.ReadProductLot(ctx, inputID)
+		//the input products must exist
+		exists, err = c.ProductLotExists(ctx, inputID)
+		if err != nil {
+			return "", fmt.Errorf("Could not read from world state. %s", err)
+		} else if !exists {
+			return "", fmt.Errorf("The input product [%s] does not exists", inputID)
+		}
+
+		//get product
+		product, err := c.ReadProductLot(ctx, inputID)
 		if err != nil {
 			return "", fmt.Errorf("Could not read from world state. %s", err)
 		}
 
 		//make sure the inputProduct quantity is valid quantities
-		
+
 		if usedAmount <= 0 {
 			return "", fmt.Errorf("inputProduct amount must be greater than 0 (inputProduct amount for inputProduct [%s] is %.2f)", inputID, usedAmount)
 		} else if usedAmount > product.AvailableQuantity {
@@ -295,11 +366,11 @@ func (c *WestseaTraceShipContract) CreateActivity(ctx contractapi.TransactionCon
 		}
 
 		//the amounts on inputLots should be reduced on the availableAmount of a productLot
-		_, err = c.UpdateProductAvailableQuantity(ctx, inputID, product.AvailableQuantity - usedAmount)
+		_, err = c.UpdateProductAvailableQuantity(ctx, inputID, product.AvailableQuantity-usedAmount)
 		if err != nil {
 			return "", fmt.Errorf("Could not write to world state. %s", err)
 		}
-   }
+	}
 
 	exists, err = c.ProductLotExists(ctx, outputProductLot.ID)
 	if err != nil {
@@ -308,7 +379,7 @@ func (c *WestseaTraceShipContract) CreateActivity(ctx contractapi.TransactionCon
 		return "", fmt.Errorf("The output product [%s] already exists", outputProductLot.ID)
 	}
 
-	_, err = c.CreateProductLot(ctx, 
+	_, err = c.CreateProductLot(ctx,
 		outputProductLot.ID,
 		outputProductLot.ReferenceNumber,
 		outputProductLot.IsSerialNumber,
@@ -322,11 +393,11 @@ func (c *WestseaTraceShipContract) CreateActivity(ctx contractapi.TransactionCon
 	}
 
 	activity := &Activity{
-		DocType: "activity",
-		ID:      activityID,
-		Designation: designation,
-		UserId: userId,
-		DateTime: dateTime,
+		DocType:          "activity",
+		ID:               activityID,
+		Designation:      designation,
+		UserId:           userId,
+		DateTime:         dateTime,
 		InputProductLots: inputProductLots,
 		OutputProductLot: outputProductLot,
 	}

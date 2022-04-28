@@ -7,6 +7,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/hyperledger/fabric-chaincode-go/shim"
 	"github.com/hyperledger/fabric-contract-api-go/contractapi"
@@ -47,18 +48,10 @@ func (c *WestseaTraceShipContract) GetAllActivities(ctx contractapi.TransactionC
 	return activities, err
 }
 
-//FIXME: try with referenceNumber
-func (c *WestseaTraceShipContract) GetTraceability(ctx contractapi.TransactionContextInterface, productID string) ([]*Activity, error) {
-	//the products must exist
-	exists, err := c.ProductLotExists(ctx, productID)
-	if err != nil {
-		return nil, fmt.Errorf("Could not read from world state. %s", err)
-	} else if !exists {
-		return nil, fmt.Errorf("The product [%s] does not exists", productID)
-	}
-
+//FIXME: order by date?
+func (c *WestseaTraceShipContract) GetTraceability(ctx contractapi.TransactionContextInterface, referenceNum string) ([]*Activity, error) {
 	//get product
-	product, err := c.ReadProductLot(ctx, productID)
+	product, err := c.ReadProductLotByReferenceNum(ctx, referenceNum)
 	if err != nil {
 		return nil, fmt.Errorf("Could not read from world state. %s", err)
 	}
@@ -114,7 +107,13 @@ func (c *WestseaTraceShipContract) CreateProductLot(ctx contractapi.TransactionC
 	if err != nil {
 		return "", fmt.Errorf("could not read from world state. %s", err)
 	} else if exists {
-		return "", fmt.Errorf("the lot %s already exists", productLotID)
+		return "", fmt.Errorf("the productLot %s already exists", productLotID)
+	}
+
+	_, err = c.ReadProductLotByReferenceNum(ctx, referenceNumber)
+
+	if err == nil {
+		return "", fmt.Errorf("the productLot with the reference number %s already exists", referenceNumber)
 	}
 
 	//the referenceNumber of a productLot can be the serial number, if isSerialNumber; or the lotNumber if !isSerialNumber)
@@ -157,6 +156,41 @@ func (c *WestseaTraceShipContract) ReadProductLot(ctx contractapi.TransactionCon
 	}
 
 	bytes, _ := ctx.GetStub().GetState(productLotID)
+
+	productLot := new(ProductLot)
+
+	err = json.Unmarshal(bytes, productLot)
+
+	if err != nil {
+		return nil, fmt.Errorf("Could not unmarshal world state data to type WestseaTraceShip")
+	}
+
+	return productLot, nil
+}
+
+// ReadProductLot retrieves an instance of ProductLot from the world state
+func (c *WestseaTraceShipContract) ReadProductLotByReferenceNum(ctx contractapi.TransactionContextInterface, referenceNum string) (*ProductLot, error) {
+	queryString := buildQueryString("referenceNumber", referenceNum)
+	productLots, _, err := getQueryResultForQueryString(ctx, queryString, IterationType(0))
+
+	if err != nil {
+		return nil, fmt.Errorf("Could not read productLot with reference number: %s", referenceNum)
+	}
+
+	if len(productLots) <= 0 {
+		return nil, fmt.Errorf("ProductLot with reference number: %s was not found", referenceNum)
+	}
+
+	productLotFound := productLots[0]
+
+	exists, err := c.ProductLotExists(ctx, productLotFound.ID)
+	if err != nil {
+		return nil, fmt.Errorf("Could not read from world state. %s", err)
+	} else if !exists {
+		return nil, fmt.Errorf("The asset %s does not exist", productLotFound.ID)
+	}
+
+	bytes, _ := ctx.GetStub().GetState(productLotFound.ID)
 
 	productLot := new(ProductLot)
 
@@ -281,7 +315,6 @@ func (c *WestseaTraceShipContract) CreateActivity(ctx contractapi.TransactionCon
 	activityID string,
 	designation string,
 	userId string,
-	dateTime string,
 	inputProductLots map[string]float32,
 	outputProductLot ProductLot,
 ) (string, error) {
@@ -349,7 +382,7 @@ func (c *WestseaTraceShipContract) CreateActivity(ctx contractapi.TransactionCon
 		ID:               activityID,
 		Designation:      designation,
 		UserId:           userId,
-		DateTime:         dateTime,
+		DateTime:         time.Now().Format(time.RFC3339),
 		InputProductLots: inputProductLots,
 		OutputProductLot: outputProductLot,
 	}

@@ -11,17 +11,16 @@
     "transactionName": "CreateActivity",
     "transactionLabel": "A test CreateActivity transaction",
     "arguments": [
-      "act1",
+      "act3",
       "Cut",
       "21e8c56c-9480-4413-8369-6defe721e93f",
-      "2022-04-16T20:40:33.953660",
       {
-        "1234": 12
+        "12345": 12
       },
       {
         "docType": "productLot",
-        "ID": "prod4123",
-        "referenceNumber": "87431623561",
+        "ID": "prod412345",
+        "referenceNumber": "874316235625",
         "isSerialNumber": true,
         "designation": "Product 123+1234",
         "productType": "component",

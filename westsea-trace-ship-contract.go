@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/hyperledger/fabric-chaincode-go/shim"
 	"github.com/hyperledger/fabric-contract-api-go/contractapi"
 )
 
@@ -24,66 +25,29 @@ type WestseaTraceShipContract struct {
  ****************************************
  */
 
-// GetAllProductLot retrieves all instances of ProductLot from the world state
+// GetAllProductLot queries for all productLots.
+// This is an example of a parameterized query where the query logic is baked into the chaincode,
+// and accepting a single query parameter (docType).
+// Only available on state databases that support rich query (e.g. CouchDB)
+// Example: Parameterized rich query
 func (c *WestseaTraceShipContract) GetAllProductLot(ctx contractapi.TransactionContextInterface) ([]*ProductLot, error) {
-	//FIXME: Get only the needed data, this gets everything
-	resultsIterator, err := ctx.GetStub().GetStateByRange("", "")
-	if err != nil {
-		return nil, err
-	}
-	defer resultsIterator.Close()
-
-	var productLots []*ProductLot
-	for resultsIterator.HasNext() {
-		queryResponse, err := resultsIterator.Next()
-		if err != nil {
-			return nil, err
-		}
-
-		var productLot ProductLot
-		err = json.Unmarshal(queryResponse.Value, &productLot)
-		if err != nil {
-			return nil, err
-		}
-
-		if productLot.DocType == "productLot" {
-			productLots = append(productLots, &productLot)
-		}
-	}
-
-	return productLots, nil
+	queryString := buildQueryString("docType", "productLot")
+	productLots, _, err := getQueryResultForQueryString(ctx, queryString, IterationType(0))
+	return productLots, err
 }
 
+// GetAllActivities queries for all activities.
+// This is an example of a parameterized query where the query logic is baked into the chaincode,
+// and accepting a single query parameter (docType).
+// Only available on state databases that support rich query (e.g. CouchDB)
+// Example: Parameterized rich query
 func (c *WestseaTraceShipContract) GetAllActivities(ctx contractapi.TransactionContextInterface) ([]*Activity, error) {
-	//FIXME: Get only the needed data, this gets everything
-	resultsIterator, err := ctx.GetStub().GetStateByRange("", "")
-	if err != nil {
-		return nil, err
-	}
-	defer resultsIterator.Close()
-
-	var activities []*Activity
-	for resultsIterator.HasNext() {
-		queryResponse, err := resultsIterator.Next()
-		if err != nil {
-			return nil, err
-		}
-
-		var activity Activity
-		err = json.Unmarshal(queryResponse.Value, &activity)
-		if err != nil {
-			return nil, err
-		}
-
-		if activity.DocType == "activity" {
-			activities = append(activities, &activity)
-		}
-	}
-
-	return activities, nil
+	queryString := buildQueryString("docType", "activity")
+	_, activities, err := getQueryResultForQueryString(ctx, queryString, IterationType(1))
+	return activities, err
 }
 
-//FIXME: Does it need to be the referenceNumber?
+//FIXME: try with referenceNumber
 func (c *WestseaTraceShipContract) GetTraceability(ctx contractapi.TransactionContextInterface, productID string) ([]*Activity, error) {
 	//the products must exist
 	exists, err := c.ProductLotExists(ctx, productID)
@@ -293,18 +257,6 @@ func (c *WestseaTraceShipContract) UpdateProductAvailableQuantity(ctx contractap
 	return fmt.Sprintf("%s available quantity updated successfully to %.2f", productLotID, newAvailableQuantity), nil
 }
 
-// DeleteProductLot deletes an instance of ProductLot from the world state
-func (c *WestseaTraceShipContract) DeleteProductLot(ctx contractapi.TransactionContextInterface, productLotID string) error {
-	exists, err := c.ProductLotExists(ctx, productLotID)
-	if err != nil {
-		return fmt.Errorf("Could not read from world state. %s", err)
-	} else if !exists {
-		return fmt.Errorf("The asset %s does not exist", productLotID)
-	}
-
-	return ctx.GetStub().DelState(productLotID)
-}
-
 /*
  ****************************************
  ****************************************
@@ -437,16 +389,67 @@ func (c *WestseaTraceShipContract) ReadActivity(ctx contractapi.TransactionConte
 	return activity, nil
 }
 
-// DeleteActivity deletes an instance of Activity from the world state
-func (c *WestseaTraceShipContract) DeleteActivity(ctx contractapi.TransactionContextInterface, activityID string) error {
-	exists, err := c.ActivityExists(ctx, activityID)
-	if err != nil {
-		return fmt.Errorf("Could not read from world state. %s", err)
-	} else if !exists {
-		return fmt.Errorf("The asset %s does not exist", activityID)
+/*
+ ****************************************
+ ****************************************
+ * COMMON METHDOS *
+ ****************************************
+ ****************************************
+ */
+
+type IterationType int
+
+const (
+	PRODUCT_LOT IterationType = iota
+	ACTIVITY
+)
+
+// constructQueryResponseFromIterator constructs a slice of lots from the resultsIterator
+func constructQueryResponseFromIterator(resultsIterator shim.StateQueryIteratorInterface, t IterationType) ([]*ProductLot, []*Activity, error) {
+	var productLots []*ProductLot
+	var activities []*Activity
+
+	for resultsIterator.HasNext() {
+		queryResult, err := resultsIterator.Next()
+		if err != nil {
+			return nil, nil, err
+		}
+
+		if t == IterationType(0) {
+			var prod ProductLot
+			err = json.Unmarshal(queryResult.Value, &prod)
+			if err != nil {
+				return nil, nil, err
+			}
+			productLots = append(productLots, &prod)
+		}
+
+		if t == IterationType(1) {
+			var activity Activity
+			err = json.Unmarshal(queryResult.Value, &activity)
+			if err != nil {
+				return nil, nil, err
+			}
+			activities = append(activities, &activity)
+		}
+
 	}
 
-	return ctx.GetStub().DelState(activityID)
+	return productLots, activities, nil
 }
 
-//TODO: remove deletes
+// getQueryResultForQueryString executes the passed in query string.
+// The result set is built and returned as a byte array containing the JSON results.
+func getQueryResultForQueryString(ctx contractapi.TransactionContextInterface, queryString string, t IterationType) ([]*ProductLot, []*Activity, error) {
+	resultsIterator, err := ctx.GetStub().GetQueryResult(queryString)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer resultsIterator.Close()
+
+	return constructQueryResponseFromIterator(resultsIterator, t)
+}
+
+func buildQueryString(key string, value string) string {
+	return fmt.Sprintf("{\"selector\":{\"%s\":\"%s\"}}", key, value)
+}

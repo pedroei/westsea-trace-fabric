@@ -23,5 +23,5 @@ type Activity struct {
 	UserId           string             `json:"userId"` //user that performed the activity
 	DateTime         string             `json:"dateTime"`
 	InputProductLots map[string]float32 `json:"inputProductLots"` //TODO: should it be the inputID or the referenceNum
-	OutputProductLot ProductLot         `json:"outputProductLot"` //FIXME: should this be just the ID?
+	OutputProductLot ProductLot         `json:"outputProductLot"` //TODO: should this be just the ID?
 }

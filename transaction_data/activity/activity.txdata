@@ -11,23 +11,24 @@
     "transactionName": "CreateActivity",
     "transactionLabel": "A test CreateActivity transaction",
     "arguments": [
-      "act3",
-      "Cut",
-      "21e8c56c-9480-4413-8369-6defe721e93f",
+      "act5",
+      "Soldagem",
+      "21e8c56c-9480-4413-8369-6defe721e93d",
       {
-        "12345": 12
+        "1234": 50,
+        "98765": 100
       },
       {
         "docType": "productLot",
-        "ID": "prod412345",
-        "referenceNumber": "874316235625",
-        "isSerialNumber": true,
-        "designation": "Product 123+1234",
-        "productType": "component",
-        "initialQuantity": 2,
-        "availableQuantity": 3,
+        "ID": "252525",
+        "referenceNumber": "555551",
+        "isSerialNumber": false,
+        "designation": "Product to be traced",
+        "productType": "part",
+        "initialQuantity": 1000,
+        "availableQuantity": 1000,
         "documentKeys": [
-          "dockkey89"
+          "keyn123456"
         ]
       }
     ],

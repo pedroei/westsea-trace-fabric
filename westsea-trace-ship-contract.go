@@ -4,6 +4,7 @@
 
 package main
 
+//TODO: intranete
 import (
 	"encoding/json"
 	"fmt"
@@ -16,6 +17,28 @@ import (
 // WestseaTraceShipContract contract for managing CRUD for WestseaTraceShip
 type WestseaTraceShipContract struct {
 	contractapi.Contract
+}
+
+type ProductTraceability struct {
+	//DocType           string
+	ID                string                `json:"ID"`
+	ReferenceNumber   string                `json:"referenceNumber"`
+	IsSerialNumber    bool                  `json:"isSerialNumber"`
+	Designation       string                `json:"designation"`
+	ProductType       string                `json:"productType"`
+	InitialQuantity   float32               `json:"initialQuantity"`
+	AvailableQuantity float32               `json:"availableQuantity"`
+	DocumentKeys      []string              `json:"documentKeys,omitempty" metadata:"documentKeys,optional"`
+	Activity          *ActivityTraceability `json:"activity,omitempty" metadata:"activity,optional" bson:"activity,omitempty"`
+}
+
+type ActivityTraceability struct {
+	//DocType          string
+	ID               string                 `json:"ID"`
+	Designation      string                 `json:"designation"`
+	UserId           string                 `json:"userId"`
+	DateTime         string                 `json:"dateTime"`
+	InputProductLots []*ProductTraceability `json:"inputProductLots,omitempty" metadata:"inputProductLots,optional"`
 }
 
 /*
@@ -48,37 +71,91 @@ func (c *WestseaTraceShipContract) GetAllActivities(ctx contractapi.TransactionC
 	return activities, err
 }
 
-//FIXME: order by date?
-func (c *WestseaTraceShipContract) GetTraceability(ctx contractapi.TransactionContextInterface, referenceNum string) ([]*Activity, error) {
+// GetTraceabilityByReferenceNum returns the complete traceability of a product by its reference number
+func (c *WestseaTraceShipContract) GetTraceabilityByReferenceNum(ctx contractapi.TransactionContextInterface, referenceNum string) (*ProductTraceability, error) {
 	//get product
-	product, err := c.ReadProductLotByReferenceNum(ctx, referenceNum)
+	productToTrace, err := c.ReadProductLotByReferenceNum(ctx, referenceNum)
 	if err != nil {
 		return nil, fmt.Errorf("Could not read from world state. %s", err)
 	}
 
-	//get all activities
-	allActivities, err := c.GetAllActivities(ctx)
+	traceability, err := buildTraceability(ctx, productToTrace, nil, nil)
+	if err != nil {
+		return nil, fmt.Errorf("Could not build traceability. %s", err)
+	}
+
+	return traceability, nil
+}
+
+// builds the traceability of a product recursively
+func buildTraceability(ctx contractapi.TransactionContextInterface, productToTrace *ProductLot,
+	preActivity *ActivityTraceability, preTraceability *ProductTraceability) (*ProductTraceability, error) {
+
+	queryString := buildQueryString("docType", "activity")
+	_, allActivities, err := getQueryResultForQueryString(ctx, queryString, IterationType(1))
+
 	if err != nil {
 		return nil, fmt.Errorf("Could not read from world state. %s", err)
 	}
 
-	var tracedActivities []*Activity
+	var outputActivity *Activity
 
 	for _, activity := range allActivities {
 		//filter for the activities that have the outputLot == product
-		if activity.OutputProductLot.ID == product.ID {
-			tracedActivities = append(tracedActivities, activity)
+		if activity.OutputProductLot.ID == productToTrace.ID {
+			outputActivity = activity
 		}
+	}
 
-		//filter for the activities that have the product.ID == inputLots.key
-		for inputID := range activity.InputProductLots {
-			if inputID == product.ID {
-				tracedActivities = append(tracedActivities, activity)
+	activityTraceability := new(ActivityTraceability)
+
+	if outputActivity != nil {
+		var inputs []*ProductTraceability
+
+		activityTraceability.ID = outputActivity.ID
+		activityTraceability.Designation = outputActivity.Designation
+		activityTraceability.UserId = outputActivity.UserId
+		activityTraceability.DateTime = outputActivity.DateTime
+		activityTraceability.InputProductLots = inputs
+	}
+
+	productLotTraceability := new(ProductTraceability)
+	productLotTraceability.ID = productToTrace.ID
+	productLotTraceability.ReferenceNumber = productToTrace.ReferenceNumber
+	productLotTraceability.IsSerialNumber = productToTrace.IsSerialNumber
+	productLotTraceability.Designation = productToTrace.Designation
+	productLotTraceability.ProductType = productToTrace.ProductType
+	productLotTraceability.InitialQuantity = productToTrace.InitialQuantity
+	productLotTraceability.AvailableQuantity = productToTrace.AvailableQuantity
+	productLotTraceability.DocumentKeys = productToTrace.DocumentKeys
+	productLotTraceability.Activity = activityTraceability
+
+	if preActivity != nil {
+		preTraceability.Activity.InputProductLots = append(preTraceability.Activity.InputProductLots, productLotTraceability)
+	}
+
+	if outputActivity != nil && outputActivity.InputProductLots != nil {
+
+		for inputID, _ := range outputActivity.InputProductLots {
+			//inputProduct, err := ReadProductLot(ctx, inputID)
+			bytes, _ := ctx.GetStub().GetState(inputID)
+			inputProduct := new(ProductLot)
+			err = json.Unmarshal(bytes, inputProduct)
+
+			if err != nil {
+				return nil, fmt.Errorf("Could not read from world state. %s", err)
+			}
+
+			if inputProduct != nil {
+				_, err := buildTraceability(ctx, inputProduct, activityTraceability, productLotTraceability)
+				if err != nil {
+					return nil, fmt.Errorf("Could not build traceability. %s", err)
+				}
 			}
 		}
 	}
 
-	return tracedActivities, nil
+	return productLotTraceability, nil
 }
 
 // ProductLotExists returns true when asset with given ID exists in world state

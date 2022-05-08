@@ -21,15 +21,16 @@ type WestseaTraceShipContract struct {
 
 type ProductTraceability struct {
 	//DocType           string
-	ID                string                `json:"ID"`
-	ReferenceNumber   string                `json:"referenceNumber"`
-	IsSerialNumber    bool                  `json:"isSerialNumber"`
-	Designation       string                `json:"designation"`
-	ProductType       string                `json:"productType"`
-	InitialQuantity   float32               `json:"initialQuantity"`
-	AvailableQuantity float32               `json:"availableQuantity"`
-	DocumentKeys      []string              `json:"documentKeys,omitempty" metadata:"documentKeys,optional"`
-	Activity          *ActivityTraceability `json:"activity,omitempty" metadata:"activity,optional" bson:"activity,omitempty"`
+	ID                  string                `json:"ID"`
+	ReferenceNumber     string                `json:"referenceNumber"`
+	IsSerialNumber      bool                  `json:"isSerialNumber"`
+	Designation         string                `json:"designation"`
+	ProductType         string                `json:"productType"`
+	InitialQuantity     float32               `json:"initialQuantity"`
+	AvailableQuantity   float32               `json:"availableQuantity"`
+	UsedQuantityAsInput float32               `json:"usedQuantityAsInput,omitempty" metadata:"usedQuantityAsInput,optional" bson:"usedQuantityAsInput,omitempty"`
+	DocumentKeys        []string              `json:"documentKeys,omitempty" metadata:"documentKeys,optional"`
+	Activity            *ActivityTraceability `json:"activity,omitempty" metadata:"activity,optional" bson:"activity,omitempty"`
 }
 
 type ActivityTraceability struct {
@@ -79,7 +80,7 @@ func (c *WestseaTraceShipContract) GetTraceabilityByReferenceNum(ctx contractapi
 		return nil, fmt.Errorf("Could not read from world state. %s", err)
 	}
 
-	traceability, err := buildTraceability(ctx, productToTrace, nil, nil)
+	traceability, err := buildTraceability(ctx, productToTrace, nil, nil, -1)
 	if err != nil {
 		return nil, fmt.Errorf("Could not build traceability. %s", err)
 	}
@@ -89,7 +90,7 @@ func (c *WestseaTraceShipContract) GetTraceabilityByReferenceNum(ctx contractapi
 
 // builds the traceability of a product recursively
 func buildTraceability(ctx contractapi.TransactionContextInterface, productToTrace *ProductLot,
-	preActivity *ActivityTraceability, preTraceability *ProductTraceability) (*ProductTraceability, error) {
+	preActivity *ActivityTraceability, preTraceability *ProductTraceability, usedQuantity float32) (*ProductTraceability, error) {
 
 	queryString := buildQueryString("docType", "activity")
 	_, allActivities, err := getQueryResultForQueryString(ctx, queryString, IterationType(1))
@@ -135,12 +136,14 @@ func buildTraceability(ctx contractapi.TransactionContextInterface, productToTra
 	}
 
 	if preActivity != nil {
+		productLotTraceability.UsedQuantityAsInput = usedQuantity
+
 		preTraceability.Activity.InputProductLots = append(preTraceability.Activity.InputProductLots, productLotTraceability)
 	}
 
 	if outputActivity != nil && outputActivity.InputProductLots != nil {
 
-		for inputID, _ := range outputActivity.InputProductLots {
+		for inputID, quantityUsed := range outputActivity.InputProductLots {
 			//inputProduct, err := ReadProductLot(ctx, inputID)
 			bytes, _ := ctx.GetStub().GetState(inputID)
 			inputProduct := new(ProductLot)
@@ -151,7 +154,7 @@ func buildTraceability(ctx contractapi.TransactionContextInterface, productToTra
 			}
 
 			if inputProduct != nil {
-				_, err := buildTraceability(ctx, inputProduct, activityTraceability, productLotTraceability)
+				_, err := buildTraceability(ctx, inputProduct, activityTraceability, productLotTraceability, quantityUsed)
 				if err != nil {
 					return nil, fmt.Errorf("Could not build traceability. %s", err)
 				}

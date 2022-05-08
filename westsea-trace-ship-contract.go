@@ -128,7 +128,11 @@ func buildTraceability(ctx contractapi.TransactionContextInterface, productToTra
 	productLotTraceability.InitialQuantity = productToTrace.InitialQuantity
 	productLotTraceability.AvailableQuantity = productToTrace.AvailableQuantity
 	productLotTraceability.DocumentKeys = productToTrace.DocumentKeys
-	productLotTraceability.Activity = activityTraceability
+
+	//if it doesn't have an ID, it means there is no activity
+	if activityTraceability.ID != "" {
+		productLotTraceability.Activity = activityTraceability
+	}
 
 	if preActivity != nil {
 		preTraceability.Activity.InputProductLots = append(preTraceability.Activity.InputProductLots, productLotTraceability)

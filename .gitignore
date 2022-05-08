@@ -1,2 +1,4 @@
 /.vscode
 /fablo-target
+/.idea
+.DS_Store

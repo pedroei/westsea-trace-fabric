@@ -20,7 +20,6 @@ type WestseaTraceShipContract struct {
 }
 
 type ProductTraceability struct {
-	//DocType           string
 	ID                  string                `json:"ID"`
 	ReferenceNumber     string                `json:"referenceNumber"`
 	IsSerialNumber      bool                  `json:"isSerialNumber"`
@@ -29,12 +28,11 @@ type ProductTraceability struct {
 	InitialQuantity     float32               `json:"initialQuantity"`
 	AvailableQuantity   float32               `json:"availableQuantity"`
 	UsedQuantityAsInput float32               `json:"usedQuantityAsInput,omitempty" metadata:"usedQuantityAsInput,optional" bson:"usedQuantityAsInput,omitempty"`
-	DocumentKeys        []string              `json:"documentKeys,omitempty" metadata:"documentKeys,optional"`
+	DocumentKeys        []DocumentKey         `json:"documentKeys,omitempty" metadata:"documentKeys,optional"`
 	Activity            *ActivityTraceability `json:"activity,omitempty" metadata:"activity,optional" bson:"activity,omitempty"`
 }
 
 type ActivityTraceability struct {
-	//DocType          string
 	ID               string                 `json:"ID"`
 	Designation      string                 `json:"designation"`
 	UserId           string                 `json:"userId"`
@@ -184,7 +182,7 @@ func (c *WestseaTraceShipContract) CreateProductLot(ctx contractapi.TransactionC
 	designation string,
 	productType string,
 	initialAmount float32,
-	documentKeys []string,
+	documentKeys []DocumentKey,
 ) (string, error) {
 
 	exists, err := c.ProductLotExists(ctx, productLotID)
@@ -288,7 +286,7 @@ func (c *WestseaTraceShipContract) ReadProductLotByReferenceNum(ctx contractapi.
 }
 
 // UpdateProductLotDocumentKeys retrieves an instance of ProductLot from the world state and updates its document keys
-func (c *WestseaTraceShipContract) UpdateProductLotDocumentKeys(ctx contractapi.TransactionContextInterface, productLotID string, newDocumentKeys []string) (string, error) {
+func (c *WestseaTraceShipContract) UpdateProductLotDocumentKeys(ctx contractapi.TransactionContextInterface, productLotID string, newDocumentKeys []DocumentKey) (string, error) {
 	exists, err := c.ProductLotExists(ctx, productLotID)
 	if err != nil {
 		return "", fmt.Errorf("Could not read from world state. %s", err)
